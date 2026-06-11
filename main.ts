@@ -23,13 +23,21 @@ Deno.serve(async (req) => {
     const subData = await response.text();
 
     // 4. 将真实的节点数据原样吐给小火箭
+    const resHeaders = {
+      "content-type": "text/plain; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    };
+
+    // 只有源站返回了订阅流量头部（例如 Clash），才向客户端下发，否则留空不设置
+    // 这样小火箭在直连和 Deno 中转下，都会统一使用带 🚀 和 💡 图标的副标题文本
+    const userInfo = response.headers.get("subscription-userinfo");
+    if (userInfo) {
+      resHeaders["subscription-userinfo"] = userInfo;
+    }
+
     return new Response(subData, {
       status: response.status,
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "Access-Control-Allow-Origin": "*",
-        "subscription-userinfo": response.headers.get("subscription-userinfo") || "", 
-      },
+      headers: resHeaders,
     });
   } catch (err) {
     return new Response("Service Unavailable", { status: 503 });
